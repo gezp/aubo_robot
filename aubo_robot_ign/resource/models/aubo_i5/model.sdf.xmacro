@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+    <!--include defination-->
+    <xmacro_include uri="model://aubo_i5/aubo_i5.def.xmacro"/>
+    <!--model-->
+    <model name="aubo_i5" canonical_link="base_link">
+        <xmacro_block name="aubo_i5" parent="__model__"/>
+        <joint name="world_aubo_i5_joint" type="fixed">
+            <parent>world</parent>
+            <child>base_link</child>
+        </joint>
+        <!--plugins for ur-->
+        <xmacro_block name="aubo_i5_position_controller"/>
+        <!--joint state publisher-->
+        <plugin filename="ignition-gazebo-joint-state-publisher-system" 
+                name="ignition::gazebo::systems::JointStatePublisher">
+            <joint_name>shoulder_joint</joint_name>
+            <joint_name>upper_arm_joint</joint_name>
+            <joint_name>fore_arm_joint</joint_name>
+            <joint_name>wrist1_joint</joint_name>
+            <joint_name>wrist2_joint</joint_name>
+            <joint_name>wrist3_joint</joint_name>
+        </plugin>
+    </model>
+</sdf>

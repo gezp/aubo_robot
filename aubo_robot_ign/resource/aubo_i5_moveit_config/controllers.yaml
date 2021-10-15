@@ -1,0 +1,13 @@
+controller_list:
+  - name: aubo_i5_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - shoulder_joint
+      - upper_arm_joint
+      - fore_arm_joint
+      - wrist1_joint
+      - wrist2_joint
+      - wrist3_joint
+
