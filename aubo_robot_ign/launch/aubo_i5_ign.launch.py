@@ -17,7 +17,7 @@ def generate_launch_description():
     #data
     world_sdf_path=os.path.join(pkg_aubo_robot_ign, 'resource', 'worlds', 'empty_world.sdf') 
     robot_sdf_path=os.path.join(pkg_aubo_robot_ign, 'resource', 'models', 'aubo_i5', 'model.sdf') 
-    ign_config_path=os.path.join(pkg_aubo_robot_ign, 'resource', 'ign', 'gui.config')
+    ign_config_path=os.path.join(pkg_aubo_robot_ign, 'ign', 'gui.config')
     # ignition_simulator launch
     ignition_simulator = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(

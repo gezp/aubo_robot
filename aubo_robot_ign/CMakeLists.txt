@@ -18,7 +18,7 @@ find_package(trajectory_msgs REQUIRED)
 
 #install
 install( DIRECTORY
-    launch resource
+    ign launch resource
   DESTINATION share/${PROJECT_NAME}
 )
 
