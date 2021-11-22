@@ -67,8 +67,8 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 install(FILES 
-  sdk/lib64/liblog4cplus-1.2.so.5
-  sdk/lib64/libauborobotcontroller.so.1
+  sdk/lib64/liblog4cplus.so
+  sdk/lib64/libauborobotcontroller.so
   DESTINATION lib
 )
 
