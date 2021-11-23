@@ -4,7 +4,7 @@
 #include "AuboRobotMetaType.h"    //机械臂的元数据类型
 #include "serviceinterface.h"     //机械臂接口
 
-#define SERVER_HOST "127.0.0.1"
+#define SERVER_HOST "192.168.1.124"
 #define SERVER_PORT 8899
 
 

@@ -66,15 +66,23 @@ install(TARGETS ${PROJECT_NAME}
     INCLUDES DESTINATION include
 )
 
-install(FILES 
+install(FILES
   sdk/lib64/liblog4cplus.so
+  sdk/lib64/liblog4cplus-1.2.so.5
   sdk/lib64/libauborobotcontroller.so
+  sdk/lib64/libauborobotcontroller.so.1
   DESTINATION lib
 )
 
 # Install executables
 install(TARGETS example joint_controller
   DESTINATION lib/${PROJECT_NAME} 
+)
+
+# install
+install( DIRECTORY
+    config launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 #test

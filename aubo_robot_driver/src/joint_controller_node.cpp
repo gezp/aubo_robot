@@ -28,18 +28,6 @@ JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
     RCLCPP_ERROR(node_->get_logger(), "failed to login.");
     return ;
   }
-  aubo_robot_namespace::RobotDiagnosis info;
-  while(true){
-    memset(&info, 0 ,sizeof(info));
-    //接口调用: 获取机械臂诊断信息
-    if(robot_service_->robotServiceGetRobotDiagnosisInfo(info) == aubo_robot_namespace::InterfaceCallSuccCode){
-      if(info.armPowerStatus == true){
-        break;
-      }
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    RCLCPP_ERROR(node_->get_logger(), "diagnosis...");
-  }
   // init cur_joint_msg_
   std::vector<std::string> joint_names = {"shoulder_joint","upperArm_joint","foreArm_joint","wrist1_joint","wrist2_joint","wrist3_joint"};
   for (auto i = 0u; i < joint_names.size(); ++i) {
@@ -56,6 +44,7 @@ JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
   set_joint_state_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
     "set_joint_state", 10,
     std::bind(&JointControllerNode::set_joint_state_cb, this, std::placeholders::_1));
+  RCLCPP_INFO(node_->get_logger(), "init successfully.");
 }
 
 void JointControllerNode::joint_state_timer_cb()
@@ -82,13 +71,13 @@ void JointControllerNode::set_joint_state_cb(const sensor_msgs::msg::JointState:
   double joint_pos[aubo_robot_namespace::ARM_DOF];
   int ret;
   for(int i = 0; i < 6; i++){
-    max_vel.jointPara[i] = 0.4; //  45/360*3.14
+    max_vel.jointPara[i] = 0.5; //  180/360*3.14
   }
   for(int i = 0; i < 6; i++){
     joint_pos[i] = msg->position[i]; //  45/360*3.14
   }
   // ret = robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_vel);
-  // ret = robot_service_->robotServiceJointMove(joint_pos, false);
+  ret = robot_service_->robotServiceJointMove(joint_pos, false);
 }
 
 }
