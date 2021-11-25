@@ -29,21 +29,28 @@ JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
     return ;
   }
   // init cur_joint_msg_
-  std::vector<std::string> joint_names = {"shoulder_joint","upperArm_joint","foreArm_joint","wrist1_joint","wrist2_joint","wrist3_joint"};
-  for (auto i = 0u; i < joint_names.size(); ++i) {
-    cur_joint_msg_.name.push_back(joint_names[i]);
+  joint_names_ = {"shoulder_joint", "upper_arm_joint", "fore_arm_joint",
+    "wrist1_joint", "wrist2_joint", "wrist3_joint"};
+  for (auto i = 0u; i < joint_names_.size(); ++i) {
+    cur_joint_msg_.name.push_back(joint_names_[i]);
     cur_joint_msg_.position.push_back(0);
     cur_joint_msg_.velocity.push_back(0);
     cur_joint_msg_.effort.push_back(0);
   }
   // create ros timer, pub and sub
   auto period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0 / 50));
-  timer_ = node_->create_wall_timer(
+  joint_state_timer_ = node_->create_wall_timer(
     period_ms, std::bind(&JointControllerNode::joint_state_timer_cb, this));
+  auto period2_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0 / 10));
+  traj_update_timer_ = node_->create_wall_timer(
+    period2_ms, std::bind(&JointControllerNode::traj_update_timer_cb, this));
   joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
   set_joint_state_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
     "set_joint_state", 10,
     std::bind(&JointControllerNode::set_joint_state_cb, this, std::placeholders::_1));
+  set_joint_trajectory_sub_ = node_->create_subscription<trajectory_msgs::msg::JointTrajectory>(
+    "set_joint_trajectory", 10,
+    std::bind(&JointControllerNode::set_joint_trajectory_cb, this, std::placeholders::_1));
   RCLCPP_INFO(node_->get_logger(), "init successfully.");
 }
 
@@ -63,8 +70,15 @@ void JointControllerNode::joint_state_timer_cb()
   joint_state_pub_->publish(cur_joint_msg_);
 }
 
+void JointControllerNode::traj_update_timer_cb(){
+  if (!has_trajectory_) {
+    return;
+  }
+}
+
 void JointControllerNode::set_joint_state_cb(const sensor_msgs::msg::JointState::SharedPtr msg)
 {
+  has_trajectory_ = false;
   // int robotServiceSetGlobalMoveJointMaxAcc (const aubo_robot_namespace::JointVelcAccParam &moveMaxAcc)
   // int robotServiceSetGlobalMoveJointMaxVelc (const aubo_robot_namespace::JointVelcAccParam &moveMaxVelc)
   aubo_robot_namespace::JointVelcAccParam max_vel;
@@ -78,6 +92,39 @@ void JointControllerNode::set_joint_state_cb(const sensor_msgs::msg::JointState:
   }
   // ret = robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_vel);
   ret = robot_service_->robotServiceJointMove(joint_pos, false);
+}
+
+void JointControllerNode::set_joint_trajectory_cb(
+  const trajectory_msgs::msg::JointTrajectory::SharedPtr msg)
+{
+  int ret;
+  aubo_robot_namespace::JointVelcAccParam max_vel;
+  for(int i = 0; i < 6; i++){
+    max_vel.jointPara[i] = 3; //  180/360*3.14
+  }
+  ret = robot_service_->robotServiceSetGlobalMoveJointMaxAcc(max_vel);
+  for(int i = 0; i < 6; i++){
+    max_vel.jointPara[i] = 3; //  180/360*3.14
+  }
+  ret = robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_vel);
+  //check
+  if (msg->joint_names.size() < joint_names_.size()) {
+    return;
+  }
+  robot_service_->robotServiceClearGlobalWayPointVector();
+  //get points
+  auto chain_size = static_cast<unsigned int>(joint_names_.size());
+  auto points_size = static_cast<unsigned int>(msg->points.size());
+  //std::cout<<"get trajectory msg:"<<points_size<<std::endl;
+  trajectory_points_.resize(points_size);
+  double joint_pos[aubo_robot_namespace::ARM_DOF];
+  for (unsigned int i = 0; i < points_size; ++i) {
+    for (unsigned int j = 0; j < chain_size; ++j) {
+        joint_pos[j] = msg->points[i].positions[j];
+    }
+    ret = robot_service_->robotServiceAddGlobalWayPoint(joint_pos);
+  }
+  ret = robot_service_->robotServiceTrackMove(aubo_robot_namespace::move_track::JIONT_CUBICSPLINE, false);
 }
 
 }
