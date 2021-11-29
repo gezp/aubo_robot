@@ -2,3 +2,5 @@
   ros__parameters:
     ip: "192.168.1.124"
     port: 8899
+    joint_max_vels: [3.0, 3.0, 3.0, 3.0, 3.0, 3.0]
+    joint_max_accs: [3.0, 3.0, 3.0, 3.0, 3.0, 3.0]

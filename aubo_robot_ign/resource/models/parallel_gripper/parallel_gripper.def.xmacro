@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+    <xmacro_define_block name="parallel_gripper_material">
+        <material>
+            <ambient>0.1 0.1 0.1</ambient>
+            <diffuse>0.05 0.05 0.05</diffuse>
+            <specular>0.6 0.6 0.6</specular>
+        </material>
+    </xmacro_define_block>
+    <xmacro_define_block name="parallel_gripper_finger" params="parent pose prefix upper">
+        <joint name="${prefix}finger_joint" type="prismatic">
+            <pose relative_to="${parent}">${pose}</pose>
+            <parent>${parent}</parent>
+            <child>${prefix}finger_link</child>
+            <axis>
+                <limit>
+                    <lower>0</lower>
+                    <upper>${upper}</upper>
+                </limit>
+                <xyz>1 0 0</xyz>
+            </axis>
+        </joint>
+        <link name="${prefix}finger_link">
+            <pose relative_to="${prefix}finger_joint">0 0 0 0 0 0</pose>
+            <inertial>
+                <pose>0 0 0.020 0 0 0</pose>
+                <xmacro_block name="inertia_box"  m="0.01" x="0.027" y="0.023" z="0.053"/>
+            </inertial>
+            <collision name="collision">
+                <pose>0 0 0 0 0 0</pose>
+                <xmacro_block name="geometry_mesh" uri="model://parallel_gripper/meshes/finger.stl"/>
+            </collision>
+            <visual name="visual">
+                <pose>0 0 0 0 0 0</pose>
+                <xmacro_block name="geometry_mesh" uri="model://parallel_gripper/meshes/finger.stl"/>
+                <xmacro_block name="parallel_gripper_material"/>
+            </visual>
+        </link>
+    </xmacro_define_block>
+    <!--model definition-->
+    <xmacro_define_block name="parallel_gripper" params="parent prefix">
+        <link name="${prefix}gripper_base_link">
+            <pose relative_to="${parent}">0 0 0 0 0 0</pose>
+            <inertial>
+                <pose>0 0 0.027 0 0 0</pose>
+                <xmacro_block name="inertia_box"  m="0.05" x="0.103" y="0.020" z="0.054"/>
+            </inertial>
+            <collision name="collision">
+                <pose>0 0 0 0 0 0</pose>
+                <xmacro_block name="geometry_mesh" uri="model://parallel_gripper/meshes/gripper_base.stl"/>
+            </collision>
+            <visual name="visual">
+                <pose>0 0 0 0 0 0</pose>
+                <xmacro_block name="geometry_mesh" uri="model://parallel_gripper/meshes/gripper_base.stl"/>
+                <xmacro_block name="parallel_gripper_material"/>
+            </visual>
+        </link>
+        <xmacro_block name="parallel_gripper_finger" parent="${prefix}gripper_base_link" pose="-0.043 0 0.0485 0 0 0"
+            prefix="${prefix}left_" upper="0.25"/>
+        <xmacro_block name="parallel_gripper_finger" parent="${prefix}gripper_base_link" pose="0.043 0 0.0485 0 0 3.14159"
+            prefix="${prefix}right_" upper="0.25"/>
+    </xmacro_define_block>
+    <!--controller definition-->
+    <xmacro_define_block name="parallel_gripper_finger_controller">
+        <plugin filename="ignition-gazebo-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
+            <joint_name>left_finger_joint</joint_name>
+            <p_gain>100</p_gain>
+            <i_gain>2</i_gain>
+            <d_gain>5</d_gain>
+            <i_max>100.0</i_max>
+            <i_min>-100.0</i_min>
+        </plugin>
+        <plugin filename="ignition-gazebo-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
+            <joint_name>right_finger_joint</joint_name>
+            <p_gain>100</p_gain>
+            <i_gain>2</i_gain>
+            <d_gain>5</d_gain>
+            <i_max>100.0</i_max>
+            <i_min>-100.0</i_min>
+        </plugin>
+    </xmacro_define_block>
+</sdf>

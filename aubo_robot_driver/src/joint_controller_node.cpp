@@ -16,18 +16,45 @@ namespace aubo_robot_driver{
 
 JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
   node_ =  std::make_shared<rclcpp::Node>("joint_controller", options);
-  // parameters
+  // init parameters
   node_->declare_parameter("ip", ip_);
   node_->declare_parameter("port", port_);
+  node_->declare_parameter("joint_max_vels", joint_max_vels_);
+  node_->declare_parameter("joint_max_accs", joint_max_accs_);
   node_->get_parameter("ip", ip_);
   node_->get_parameter("port", port_);
-  // robot service
+  node_->get_parameter("joint_max_vels", joint_max_vels_);
+  node_->get_parameter("joint_max_accs", joint_max_accs_);
+  // init robot service
   robot_service_ = std::make_shared<ServiceInterface>();
   int ret = robot_service_->robotServiceLogin(ip_.c_str(), port_, "aubo", "123456");
   if( ret != aubo_robot_namespace::InterfaceCallSuccCode) {
     RCLCPP_ERROR(node_->get_logger(), "failed to login.");
-    return ;
+    return;
   }
+  // set max vel of joints
+  aubo_robot_namespace::JointVelcAccParam max_joint_limit;
+  if (joint_max_vels_.size() != aubo_robot_namespace::ARM_DOF) {
+    RCLCPP_ERROR(
+      node_->get_logger(), "the size of parameter joint_max_vels must be %d",
+      aubo_robot_namespace::ARM_DOF);
+    return;
+  }
+  for(int i = 0; i < aubo_robot_namespace::ARM_DOF; i++){
+    max_joint_limit.jointPara[i] = joint_max_vels_[i]; //  180/360*3.14
+  }
+  ret = robot_service_->robotServiceSetGlobalMoveJointMaxAcc(max_joint_limit);
+  // set max acc of joints
+  if (joint_max_accs_.size() != aubo_robot_namespace::ARM_DOF) {
+    RCLCPP_ERROR(
+      node_->get_logger(), "the size of parameter joint_max_accs must be %d",
+      aubo_robot_namespace::ARM_DOF);
+    return;
+  }
+  for(int i = 0; i < aubo_robot_namespace::ARM_DOF; i++){
+    max_joint_limit.jointPara[i] = joint_max_accs_[i]; //  180/360*3.14
+  }
+  ret = robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_joint_limit);
   // init cur_joint_msg_
   joint_names_ = {"shoulder_joint", "upper_arm_joint", "fore_arm_joint",
     "wrist1_joint", "wrist2_joint", "wrist3_joint"};
@@ -41,9 +68,6 @@ JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
   auto period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0 / 50));
   joint_state_timer_ = node_->create_wall_timer(
     period_ms, std::bind(&JointControllerNode::joint_state_timer_cb, this));
-  auto period2_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0 / 10));
-  traj_update_timer_ = node_->create_wall_timer(
-    period2_ms, std::bind(&JointControllerNode::traj_update_timer_cb, this));
   joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
   set_joint_state_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
     "set_joint_state", 10,
@@ -70,61 +94,50 @@ void JointControllerNode::joint_state_timer_cb()
   joint_state_pub_->publish(cur_joint_msg_);
 }
 
-void JointControllerNode::traj_update_timer_cb(){
-  if (!has_trajectory_) {
-    return;
-  }
-}
-
 void JointControllerNode::set_joint_state_cb(const sensor_msgs::msg::JointState::SharedPtr msg)
 {
-  has_trajectory_ = false;
-  // int robotServiceSetGlobalMoveJointMaxAcc (const aubo_robot_namespace::JointVelcAccParam &moveMaxAcc)
-  // int robotServiceSetGlobalMoveJointMaxVelc (const aubo_robot_namespace::JointVelcAccParam &moveMaxVelc)
-  aubo_robot_namespace::JointVelcAccParam max_vel;
-  double joint_pos[aubo_robot_namespace::ARM_DOF];
   int ret;
-  for(int i = 0; i < 6; i++){
-    max_vel.jointPara[i] = 0.5; //  180/360*3.14
+  double joint_pos[aubo_robot_namespace::ARM_DOF];
+  // check
+  if (msg->name.size() != joint_names_.size()) {
+    return;
   }
-  for(int i = 0; i < 6; i++){
-    joint_pos[i] = msg->position[i]; //  45/360*3.14
+  // set position
+  for (int i = 0; i < 6; i++) {
+    joint_pos[i] = msg->position[i];
   }
-  // ret = robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_vel);
+  // move
   ret = robot_service_->robotServiceJointMove(joint_pos, false);
+  if (ret != aubo_robot_namespace::ErrnoSucc) {
+    RCLCPP_ERROR(node_->get_logger(), "set_joint_state_cb error : %d.", ret);
+  }
 }
 
 void JointControllerNode::set_joint_trajectory_cb(
   const trajectory_msgs::msg::JointTrajectory::SharedPtr msg)
 {
   int ret;
-  aubo_robot_namespace::JointVelcAccParam max_vel;
-  for(int i = 0; i < 6; i++){
-    max_vel.jointPara[i] = 3; //  180/360*3.14
-  }
-  ret = robot_service_->robotServiceSetGlobalMoveJointMaxAcc(max_vel);
-  for(int i = 0; i < 6; i++){
-    max_vel.jointPara[i] = 3; //  180/360*3.14
-  }
-  ret = robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_vel);
-  //check
-  if (msg->joint_names.size() < joint_names_.size()) {
+  double joint_pos[aubo_robot_namespace::ARM_DOF];
+  // check
+  if (msg->joint_names.size() != joint_names_.size()) {
     return;
   }
+  // clear trajectory points
   robot_service_->robotServiceClearGlobalWayPointVector();
-  //get points
+  // get trajectory points
   auto chain_size = static_cast<unsigned int>(joint_names_.size());
   auto points_size = static_cast<unsigned int>(msg->points.size());
-  //std::cout<<"get trajectory msg:"<<points_size<<std::endl;
-  trajectory_points_.resize(points_size);
-  double joint_pos[aubo_robot_namespace::ARM_DOF];
   for (unsigned int i = 0; i < points_size; ++i) {
     for (unsigned int j = 0; j < chain_size; ++j) {
         joint_pos[j] = msg->points[i].positions[j];
     }
     ret = robot_service_->robotServiceAddGlobalWayPoint(joint_pos);
   }
+  // move
   ret = robot_service_->robotServiceTrackMove(aubo_robot_namespace::move_track::JIONT_CUBICSPLINE, false);
+  if (ret != aubo_robot_namespace::ErrnoSucc) {
+    RCLCPP_ERROR(node_->get_logger(), "set_joint_trajectory_cb error : %d.", ret);
+  }
 }
 
 }

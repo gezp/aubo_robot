@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+    <!--include defination-->
+    <xmacro_include uri="model://parallel_gripper/parallel_gripper.def.xmacro"/>
+    <!--model-->
+    <model name="parallel_gripper" canonical_link="gripper_base_link">
+        <pose>0 0 1.0 0 0 0</pose>
+        <xmacro_block name="parallel_gripper" parent="__model__" prefix=""/>
+        <joint name="world_parallel_gripper_joint" type="fixed">
+            <parent>world</parent>
+            <child>gripper_base_link</child>
+        </joint>
+        <!--plugins for parallel_gripper-->
+        <xmacro_block name="parallel_gripper_finger_controller"/>
+    </model>
+</sdf>
