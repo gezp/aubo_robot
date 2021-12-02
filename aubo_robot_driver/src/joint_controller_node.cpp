@@ -58,6 +58,7 @@ JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
   // init cur_joint_msg_
   joint_names_ = {"shoulder_joint", "upper_arm_joint", "fore_arm_joint",
     "wrist1_joint", "wrist2_joint", "wrist3_joint"};
+  cur_joint_msg_.header.frame_id = "aubo_i5";
   for (auto i = 0u; i < joint_names_.size(); ++i) {
     cur_joint_msg_.name.push_back(joint_names_[i]);
     cur_joint_msg_.position.push_back(0);
@@ -86,6 +87,7 @@ void JointControllerNode::joint_state_timer_cb()
     return;
   }
   // set position
+  cur_joint_msg_.header.stamp = node_->now();
   for(int i = 0; i < 6; i++){
     cur_joint_msg_.position[i] = joint_states[i].jointPosJ;
     cur_joint_msg_.velocity[i] = joint_states[i].jointSpeedMoto;
