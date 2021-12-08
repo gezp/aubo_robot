@@ -18,7 +18,7 @@ def generate_launch_description():
     joint_controller = Node(
         package='aubo_robot_driver', 
         executable='joint_controller',
-        name="aubo_joint_controller",
+        name="aubo_i5_joint_controller",
         parameters=[robot_config_path],
         output='screen') 
     ld.add_action(joint_controller)          
