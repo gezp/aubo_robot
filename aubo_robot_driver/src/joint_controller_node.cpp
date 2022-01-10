@@ -76,7 +76,11 @@ JointControllerNode::JointControllerNode(const rclcpp::NodeOptions & options){
   set_joint_trajectory_sub_ = node_->create_subscription<trajectory_msgs::msg::JointTrajectory>(
     "set_joint_trajectory", 10,
     std::bind(&JointControllerNode::set_joint_trajectory_cb, this, std::placeholders::_1));
+  set_joint_limit_sub_ = node_->create_subscription<std_msgs::msg::Float32>(
+    "set_joint_limit", 10,
+    std::bind(&JointControllerNode::set_joint_limit_cb, this, std::placeholders::_1));
   RCLCPP_INFO(node_->get_logger(), "init successfully.");
+
 }
 
 void JointControllerNode::joint_state_timer_cb()
@@ -142,6 +146,21 @@ void JointControllerNode::set_joint_trajectory_cb(
   }
 }
 
+void JointControllerNode::set_joint_limit_cb(const std_msgs::msg::Float32::SharedPtr msg)
+{
+  // set max vel of joints
+  aubo_robot_namespace::JointVelcAccParam max_joint_limit;
+  if (joint_max_accs_.size() != aubo_robot_namespace::ARM_DOF) {
+    RCLCPP_ERROR(
+      node_->get_logger(), "the size of parameter joint_max_accs must be %d",
+      aubo_robot_namespace::ARM_DOF);
+    return;
+  }
+  for(int i = 0; i < aubo_robot_namespace::ARM_DOF; i++){
+    max_joint_limit.jointPara[i] = joint_max_accs_[i] * msg->data; //  180/360*3.14
+  }
+  robot_service_->robotServiceSetGlobalMoveJointMaxVelc(max_joint_limit);
+}
 }
 
 

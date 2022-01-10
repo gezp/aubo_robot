@@ -17,6 +17,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "trajectory_msgs/msg/joint_trajectory.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 class ServiceInterface;
 
@@ -35,6 +36,7 @@ private:
   void joint_state_timer_cb();
   void set_joint_state_cb(const sensor_msgs::msg::JointState::SharedPtr msg);
   void set_joint_trajectory_cb(const trajectory_msgs::msg::JointTrajectory::SharedPtr msg);
+  void set_joint_limit_cb(const std_msgs::msg::Float32::SharedPtr msg);
 
 private:
   rclcpp::Node::SharedPtr node_;
@@ -42,6 +44,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr set_joint_state_sub_;
   rclcpp::Subscription<trajectory_msgs::msg::JointTrajectory>::SharedPtr set_joint_trajectory_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr set_joint_limit_sub_;
   rclcpp::TimerBase::SharedPtr joint_state_timer_;
   // robot interface
   std::string ip_{"127.0.0.1"};
