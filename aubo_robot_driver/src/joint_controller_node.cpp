@@ -126,6 +126,7 @@ void JointControllerNode::set_joint_trajectory_cb(
   double joint_pos[aubo_robot_namespace::ARM_DOF];
   // check
   if (msg->joint_names.size() != joint_names_.size()) {
+    RCLCPP_ERROR(node_->get_logger(), "joint_trajectory msg is invalid (joint size).");
     return;
   }
   // clear trajectory points
@@ -135,6 +136,10 @@ void JointControllerNode::set_joint_trajectory_cb(
   auto points_size = static_cast<unsigned int>(msg->points.size());
   for (unsigned int i = 0; i < points_size; ++i) {
     for (unsigned int j = 0; j < chain_size; ++j) {
+        if (msg->points[i].positions.size() != chain_size) {
+          RCLCPP_ERROR(node_->get_logger(), "joint_trajectory msg is invalid (point).");
+          return;
+        }
         joint_pos[j] = msg->points[i].positions[j];
     }
     ret = robot_service_->robotServiceAddGlobalWayPoint(joint_pos);
